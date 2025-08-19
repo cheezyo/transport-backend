@@ -7,6 +7,9 @@ from django.db.models import Q
 from .models import Customer, PricePlan, CustomerPricePlan, Holiday, Location, Vehicle, Driver, Shift, Trip, Assignment
 from .serializers import CustomerSerializer, PricePlanSerializer, CustomerPricePlanSerializer, HolidaySerializer, LocationSerializer, VehicleSerializer, DriverSerializer, ShiftSerializer, TripSerializer, AssignmentSerializer
 from .services import pricing_for_trip
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from .serializers import UserSerializer
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -120,3 +123,10 @@ class AssignmentViewSet(viewsets.ModelViewSet):
     queryset = Assignment.objects.select_related(
         'trip', 'driver').all().order_by('-assigned_at')
     serializer_class = AssignmentSerializer
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)
