@@ -148,6 +148,8 @@ class Trip(models.Model):
     status = models.CharField(max_length=20,
                               choices=STATUS_CHOICES,
                               default="unassigned")
+    comment = models.TextField(blank=True, null=True)
+    exception_note = models.TextField(blank=True, null=True)
 
     vehicle = models.ForeignKey("Vehicle",
                                 on_delete=models.SET_NULL,

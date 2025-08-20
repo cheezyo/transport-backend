@@ -73,6 +73,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # enkelt for Replit dev. Stram inn senere om øns
 # Hvis du vil bruke DRF's browsable API (HTML-skjema) fra en ekstern origin,
 # må du legge den inn her. Ikke nødvendig for rene JWT-kall fra frontend.
 CSRF_TRUSTED_ORIGINS = [
+    "https://*.replit.dev",
     "https://5ba06178-2760-4371-94c4-382dfb11512d-00-2oa7ss2ehxwru.janeway.replit.dev",
 ]
 
