@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 User = get_user_model()
 
@@ -114,7 +115,8 @@ class Trip(models.Model):
         ("assigned", "assigned"),
         ("exception", "exception"),
     ]
-
+    flight_number = models.CharField(max_length=16, blank=True, null=True)
+    po_number = models.CharField(max_length=64, blank=True, null=True)
     date = models.DateField()
     start_time = models.TimeField()
     duration_min = models.IntegerField(default=30)
@@ -157,6 +159,15 @@ class Trip(models.Model):
                                 blank=True,
                                 related_name="trips")
     created_at = models.DateTimeField(auto_now_add=True)
+    invoiced = models.BooleanField(default=False, db_index=True)
+    invoiced_at = models.DateTimeField(null=True, blank=True)
+    invoiced_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="invoiced_trips",
+    )
 
     def __str__(self):
         return f"{self.date} {self.start_time} {self.origin_location}→{self.destination_location}"

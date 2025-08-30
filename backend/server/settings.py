@@ -8,6 +8,11 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY",
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
+FR24_API_BASE = "https://fr24api.flightradar24.com/api"
+FR24_AUTH_SCHEME = "bearer"
+FR24_FLIGHT_SUMMARY_VARIANT = "full"
+FR24_API_TOKEN = "0198e661-3b5a-71db-a889-561e7a90aed3|VDyWrtDnHRfehpbmKsul5yIRQAW2N5MfRTal09QE8be67efd"
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

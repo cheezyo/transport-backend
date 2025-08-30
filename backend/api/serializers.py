@@ -75,20 +75,43 @@ class ShiftSerializer(serializers.ModelSerializer):
 
 
 class TripSerializer(serializers.ModelSerializer):
-    # eksisterende write-only felter for smarte lokasjoner
+    # Write-only felter for "smarte lokasjoner"
     origin_name = serializers.CharField(write_only=True, required=False)
     destination_name = serializers.CharField(write_only=True, required=False)
     stop1_name = serializers.CharField(write_only=True, required=False)
     stop2_name = serializers.CharField(write_only=True, required=False)
 
-    # valgfri tildeling via Trip-CRUD (enkelt i UI)
+    # Valgfri tildeling via CRUD
     driver_id = serializers.IntegerField(write_only=True,
                                          required=False,
                                          allow_null=True)
 
-    # NYTT: lesbart felt for hvem som er tildelt
+    # Lesbare felter
     current_driver = serializers.SerializerMethodField(read_only=True)
     price = serializers.IntegerField(required=False, allow_null=True)
+
+    # Faktura (read-only ut)
+    invoiced = serializers.BooleanField(read_only=True)
+    invoiced_at = serializers.DateTimeField(read_only=True)
+    invoiced_by = serializers.SerializerMethodField(read_only=True)
+
+    def get_invoiced_by(self, obj):
+        u = getattr(obj, "invoiced_by", None)
+        if not u:
+            return None
+        return {"id": u.id, "username": getattr(u, "username", None)}
+
+    def get_current_driver(self, obj):
+        a = getattr(obj, "assignment", None)
+        if not a:
+            return None
+        d = a.driver
+        return {
+            "id":
+            d.id,
+            "name":
+            getattr(d, "name", None) or getattr(d.user, "username", str(d.id)),
+        }
 
     class Meta:
         model = Trip
@@ -108,15 +131,27 @@ class TripSerializer(serializers.ModelSerializer):
             "customer",
             "pax",
             "price",
-            "status",  # read-only (styres automatisk)
+            "status",
             "comment",
             "exception_note",
             "vehicle",
             "created_at",
             "driver_id",  # write-only
             "current_driver",  # read-only
+            "invoiced",
+            "invoiced_at",
+            "invoiced_by",
+            "flight_number",
+            "po_number",
         ]
-        read_only_fields = ["status", "created_at", "current_driver"]
+        read_only_fields = [
+            "status",
+            "created_at",
+            "current_driver",
+            "invoiced",
+            "invoiced_at",
+            "invoiced_by",
+        ]
 
     def validate(self, attrs):
         """
@@ -129,13 +164,12 @@ class TripSerializer(serializers.ModelSerializer):
         if price == "":
             price = None
 
-        # pris ikke satt: må ha prisplan
         if not customer:
             raise serializers.ValidationError(
                 {"price": "Price is required when no customer is selected."})
 
         has_plan = CustomerPricePlan.objects.filter(customer=customer).exists()
-        if not has_plan:
+        if not has_plan and price in (None, ""):
             raise serializers.ValidationError({
                 "price":
                 "Price is required because this customer has no price plan."
@@ -146,18 +180,6 @@ class TripSerializer(serializers.ModelSerializer):
     def _ensure_location(self, name: str):
         loc, _ = Location.objects.get_or_create(name=name.strip())
         return loc
-
-    def get_current_driver(self, obj):
-        a = getattr(obj, "assignment", None)
-        if not a:
-            return None
-        d = a.driver
-        return {
-            "id":
-            d.id,
-            "name":
-            getattr(d, "name", None) or getattr(d.user, "username", str(d.id))
-        }
 
     @transaction.atomic
     def create(self, validated):
@@ -176,12 +198,12 @@ class TripSerializer(serializers.ModelSerializer):
         if stop2_name and not validated.get("stop2_location"):
             validated["stop2_location"] = self._ensure_location(stop2_name)
 
-        # Pris hvis utelatt
+        # Pris hvis utelatt men prisplan finnes
         if ("price" not in validated) or (validated.get("price")
                                           in (None, "")):
             validated["price"] = pricing_for_trip(validated)
 
-        # Håndter driver_id for status
+        # Status ut fra tildeling
         driver_id = validated.pop("driver_id", None)
         validated["status"] = "assigned" if driver_id else "unassigned"
 
